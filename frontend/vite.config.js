@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/rank-resumes': 'http://127.0.0.1:8000'
+      '/rank-resumes': 'http://127.0.0.1:8000',
+      '/candidates': 'http://127.0.0.1:8000'
     }
   }
 })
