@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, FileText, Search, Trophy, Loader2, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { UploadCloud, FileText, Search, Trophy, Loader2, AlertCircle, Sparkles, CheckCircle2, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 // Binary Search implementation
@@ -138,6 +138,24 @@ export default function Dashboard() {
           results.push(response.data);
         } catch (err) {
           console.error(`Error processing ${file.name}:`, err);
+          
+          // Extract detailed error from FastAPI if available
+          let serverError = err.message;
+          if (err.response && err.response.data) {
+            if (typeof err.response.data === 'string') {
+              serverError = err.response.data; // Handle plain text 500 errors
+            } else if (err.response.data.detail) {
+              // Handle JSON formatted FastAPI errors
+              serverError = typeof err.response.data.detail === 'string' 
+                ? err.response.data.detail 
+                : JSON.stringify(err.response.data.detail);
+            }
+          }
+          
+          setError(prev => {
+            const newError = `Failed to process ${file.name}: ${serverError}`;
+            return prev ? `${prev} | ${newError}` : newError;
+          });
         }
       }
 
@@ -179,6 +197,18 @@ export default function Dashboard() {
     }
   };
 
+  const handleClear = async () => {
+    try {
+      await axios.delete('/candidates');
+      setCandidates([]);
+      setSearchedCandidate(null);
+      setSearchQuery('');
+    } catch (err) {
+      console.error('Could not clear candidates', err);
+      setError('Failed to clear leaderboard.');
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
       {/* Left Column - Input & Upload */}
@@ -213,7 +243,7 @@ export default function Dashboard() {
             {...getRootProps()} 
             className={`border border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center min-h-[220px] bg-[#0A0B10]/50
               ${isDragActive ? 'border-indigo-400 bg-indigo-500/10 shadow-[0_0_20px_rgba(99,102,241,0.15)]' : 'border-white/10 hover:border-indigo-500/40 hover:bg-[#0A0B10]'}
-              ${!jobDescription.trim() ? 'opacity-40 cursor-not-allowed pointer-events-none' : ''}`}
+              ${!jobDescription.trim() ? 'opacity-40 cursor-not-allowed' : ''}`}
           >
             <input {...getInputProps()} />
             {isProcessing ? (
@@ -259,15 +289,25 @@ export default function Dashboard() {
               <p className="text-gray-500 text-sm mt-1">Sorted via Max-Heap algorithms</p>
             </div>
             
-            <div className="relative w-full sm:w-72">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={handleSearch}
-                placeholder="Binary search by name..."
-                className="w-full bg-[#0A0B10] border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all shadow-inner"
-              />
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-64">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={handleSearch}
+                  placeholder="Binary search by name..."
+                  className="w-full bg-[#0A0B10] border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all shadow-inner"
+                />
+              </div>
+              <button 
+                onClick={handleClear}
+                disabled={candidates.length === 0}
+                className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed group relative"
+                title="Clear Leaderboard"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
             </div>
           </div>
 
