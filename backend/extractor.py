@@ -1,15 +1,14 @@
-import fitz  # PyMuPDF
+import pdfplumber
 
 
 def extract_text_from_pdf(pdf_path):
-    """Extract text from a PDF file. Raises an exception on failure instead of returning an error string."""
-    doc = fitz.open(pdf_path)
+    """Extract text from a PDF file using pdfplumber (pure Python, no C compilation needed)."""
     text = ""
-    for page in doc:
-        page_text = page.get_text()
-        if page_text:
-            text += page_text
-    doc.close()
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
     return text.strip()
 
 
